@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+docker run  \
+	--user $(id -u):$(id -g)\
+	-v $(pwd)/docs/:/var/www/html/snorlax-httpd/\
+	-v $(pwd)/:/app\
+	-p 8888:80\
+	seanmorris/snorlax-httpd
+
