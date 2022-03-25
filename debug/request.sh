@@ -19,10 +19,10 @@ function request
 		MESSAGE=$(cat ${FILENAME});
 	}
 
-	ACCEPT='text/plain';
+	ACCEPT_ENCODING='*';
 
 	[[ -z ${STREAM} ]] || {
-		ACCEPT='text/plain-stream';
+		ACCEPT_ENCODING='chunked';
 	}
 
 	SIGNATURE=$(\
@@ -38,7 +38,7 @@ function request
 	[[ -z ${MESSAGE:-} ]] && {
 		curl -i --http2\
 			-X "${METHOD}" $LOCATION\
-			-H "accept: ${ACCEPT}"\
+			-H "accept-encoding: ${ACCEPT_ENCODING}"\
 			-H "rsa-public-key-fingerprint: ${FINGERPRINT}"\
 			-H "rsa-public-key: ${PUBLIC_KEY//$'\n'/'\n'}"\
 			-H "rsa-signature: ${SIGNATURE//$'\n'/'\n'}"\
@@ -46,7 +46,7 @@ function request
 	} || {
 		curl -i --http2\
 			-X "${METHOD}" $LOCATION\
-			-H "accept: ${ACCEPT}"\
+			-H "accept-encoding: ${ACCEPT_ENCODING}"\
 			-H "rsa-public-key-fingerprint: ${FINGERPRINT}"\
 			-H "rsa-public-key: ${PUBLIC_KEY//$'\n'/'\n'}"\
 			-H "rsa-signature: ${SIGNATURE//$'\n'/'\n'}"\
