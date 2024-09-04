@@ -19,8 +19,7 @@
 ### Login challenge
 
 
-### Getting a whole file
-### Getting a partial file
+### Getting a file
 ### Watching a file
 
 get

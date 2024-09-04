@@ -7,22 +7,11 @@ function request
 	METHOD=${1:-GET};
 	LOCATION=${2:-};
 	FILENAME=${3:-/dev/null};
-	STREAM=${4:-};
+	ACCEPT=${4:-};
 	MESSAGE=
-
-	# [[ ${METHOD} == 'DELETE' ]] && {
-	# 	FILENAME=$(localTmp);
-	# 	echo "delete-token" > ${FILENAME};
-	# }
 
 	[[ -z ${FILENAME} ]] || {
 		MESSAGE=$(cat ${FILENAME});
-	}
-
-	ACCEPT_ENCODING='*';
-
-	[[ -z ${STREAM} ]] || {
-		ACCEPT_ENCODING='chunked';
 	}
 
 	SIGNATURE=$(\
@@ -35,26 +24,17 @@ function request
 
 	PUBLIC_KEY=$(cat ssh/public-key.pem);
 
-	[[ -z ${MESSAGE:-} ]] && {
-		curl -i --http2\
-			-X "${METHOD}" $LOCATION\
-			-H "accept-encoding: ${ACCEPT_ENCODING}"\
-			-H "rsa-public-key-fingerprint: ${FINGERPRINT}"\
-			-H "rsa-public-key: ${PUBLIC_KEY//$'\n'/'\n'}"\
-			-H "rsa-signature: ${SIGNATURE//$'\n'/'\n'}"\
-			--data-binary @<(echo "${MESSAGE}")
-	} || {
-		curl -i --http2\
-			-X "${METHOD}" $LOCATION\
-			-H "accept-encoding: ${ACCEPT_ENCODING}"\
-			-H "rsa-public-key-fingerprint: ${FINGERPRINT}"\
-			-H "rsa-public-key: ${PUBLIC_KEY//$'\n'/'\n'}"\
-			-H "rsa-signature: ${SIGNATURE//$'\n'/'\n'}"\
-			--data-binary @<(echo "${MESSAGE}")
-	}
+	curl -sND /dev/stderr --http2 --no-keepalive \
+		-X "${METHOD}" "$LOCATION" \
+		-H "accept: ${ACCEPT}" \
+		-H "Last-Event-ID: earliest" \
+		-H "rsa-public-key-fingerprint: ${FINGERPRINT}" \
+		-H "rsa-public-key: ${PUBLIC_KEY//$'\n'/'\n'}" \
+		-H "rsa-signature: ${SIGNATURE//$'\n'/'\n'}" \
+		--data-binary @<(echo "${MESSAGE}") &
+	CURL_PID=$!
+	trap "kill ${CURL_PID}; exit 0;" EXIT
+	wait;
 
-	# [[ ${METHOD} == 'DELETE' ]] && {
-	# 	rm -rf $(dirname $(localTmp));
-	# }
+	trap "exit 0;" EXIT
 }
-

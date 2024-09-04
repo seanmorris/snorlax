@@ -3,18 +3,26 @@
 # shellcheck source=../lib/init.sh
 set -a; . "$(dirname "${0}")/../lib/init.sh"; set +a;
 
-[[ -z "${HTTP_RSA_PUBLIC_KEY:-}" ]] && respondUnauthorized;
-[[ -z "${HTTP_RSA_SIGNATURE:-}" ]] && respondUnauthorized;
+if [[ -z "${HTTP_RSA_PUBLIC_KEY:-}" ]] && [[ -z "${HTTP_RSA_SIGNATURE:-}" ]]; then {
+	HTTP_RSA_PUBLIC_KEY_FINGERPRINT="ANON"
+}
+fi
+
+# [[ -z "${HTTP_RSA_PUBLIC_KEY:-}" ]] && respondUnauthorized;
+# [[ -z "${HTTP_RSA_SIGNATURE:-}" ]] && respondUnauthorized;
 
 CONTENT=$(cat);
 
 failOnRequestDotFile;
 
-verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
-	|| respondUnauthorized "Signature verification failed.";
+if [ "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}" != "ANON" ]; then {
+	verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
+		|| respondUnauthorized "Signature verification failed.";
 
-verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
-	|| respondUnauthorized "Fingerprint verification failed.";
+	verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
+		|| respondUnauthorized "Fingerprint verification failed.";
+}
+fi
 
 failIfCollectionNotFound "${DIRECTORY}";
 failIfResourceNotFound   "${FILENAME}";
@@ -22,37 +30,128 @@ failIfResourceNotFound   "${FILENAME}";
 checkPerms "${REQUEST_METHOD}" "${FILENAME}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
 	|| respondUnauthorized "Action not allowed.";
 
-LOCK_FILE="/var/lock/sycamore${FILENAME}";
+[ -d "${FILENAME}" ] && {
+	if [ "${HTTP_ACCEPT}" == "text/event-stream" ]; then {
+		echo -ne "Status: 200 OK\n";
+		echo -ne "X-Accel-Buffering: no\n";
+		echo -ne "Content-type: text/event-stream\n";
+		echo -ne "Cache-control: no-cache\n";
+		echo -ne "\n";
+
+		INOTIFY_OPTIONS="-m ${FILENAME} -e modify -e create -e delete --timefmt %s.%N"
+
+		# trap "echo CONNECTION CLOSED >&2; exit 0;" EXIT
+
+		if [[ ${EVENT_WAIT} -eq -1 ]]; then {
+			inotifywait ${INOTIFY_OPTIONS} --format "id:%T%nevent:%e%ndata:${REQUEST_PATH}/%f%n"
+		}
+		else {
+			inotifywait ${INOTIFY_OPTIONS} --format "id:%T%nevent:%e%ndata:${REQUEST_PATH}/%f%n" -t "${EVENT_WAIT}";
+		}
+		fi
+	}
+	elif [ "${HTTP_ACCEPT}" == "text/stream" ]; then {
+		echo -ne "Status: 200 OK\n";
+		echo -ne "X-Accel-Buffering: no\n";
+		echo -ne "Transfer-encoding: chunked\n";
+		echo -ne "Content-type: text/plain\n";
+		echo -ne "Cache-control: no-cache\n";
+		echo -ne "\n";
+
+		INOTIFY_OPTIONS="-m ${FILENAME} -e modify -e create -e delete"
+
+		if [[ ${EVENT_WAIT} -eq -1 ]]; then {
+			inotifywait ${INOTIFY_OPTIONS} --format "%e:${REQUEST_PATH}/%f"
+		}
+		else {
+			inotifywait ${INOTIFY_OPTIONS} --format "%e:${REQUEST_PATH}/%f" -t ${EVENT_WAIT};
+		}
+		fi
+	}
+	else {
+		[ -f "${DIRECTORY}/.before-get.sh" ] && . ${DIRECTORY}/.before-get.sh
+
+		echo -ne "Status: 200 OK\n";
+		# echo -ne "Content-type: inode/directory\n";
+		echo -ne "Content-type: text/plain\n";
+		echo -ne "\n";
+
+		if [ -f "${FILENAME}/.index.sh" ]; then {
+			. ${FILENAME}/.index.sh;
+		}
+		else {
+			ls -t --time=birth ${FILENAME}
+		}
+		fi
+
+		[ -f "${DIRECTORY}/.after-get.sh" ] && . ${DIRECTORY}/.after-get.sh
+	}
+	fi
+
+	exit 0;
+}
+
+LOCK_FILE="/var/lock/snorlax_"$(sed "s#_#__#g;s#/#_#g" <<< "${FILENAME}");
 LOCK_DIR=$(dirname "${LOCK_FILE}");
 
 mkdir -p "${LOCK_DIR}";
 
 (
-	if [[ "${HTTP_ACCEPT}" == "text/plain-stream" ]]; then {
+	if [ "${HTTP_ACCEPT}" == "text/event-stream" ]; then {
 		echo -ne "Status: 200 OK\n";
-		echo -ne "Content-type: text/plain\n";
-		echo -ne "Transfer-Encoding: chunked\n";
+		echo -ne "X-Accel-Buffering: no\n";
+		echo -ne "Content-type: text/event-stream\n";
+		echo -ne "Cache-control: no-cache\n";
 		echo -ne "\n";
 
-		chunkFileDescriptor <(cat "${FILENAME}");
-
-		if [[ ${EVENT_WAIT} -eq -1 ]]; then {
-			chunkFileDescriptor <(tail -n 0 -f "${FILENAME}");
-		}
-		else {
-			chunkFileDescriptor <(timeout ${TIMEOUT_ARGS} tail -n 0 -f "${FILENAME}");
+		if [ "${HTTP_LAST_EVENT_ID}" == "earliest" ]; then {
+			eventsFromFileDescriptor line <(cat "${FILENAME}");
 		}
 		fi
 
-		echo -ne "0\r\n\r\n";
+		if [[ ${EVENT_WAIT} -eq -1 ]]; then {
+			eventsFromFileDescriptor line <(tail -n 0 -f "${FILENAME}");
+		}
+		else {
+			eventsFromFileDescriptor line <(timeout ${TIMEOUT_ARGS} tail -n 0 -f "${FILENAME}");
+		}
+		fi
 	}
-	else {
-		flock -s "${FLOCK_ARGS}" 200 || exit 1;
+	elif [ "${HTTP_ACCEPT}" == "text/stream" ]; then {
 		echo -ne "Status: 200 OK\n";
+		echo -ne "X-Accel-Buffering: no";
 		echo -ne "Content-type: text/plain\n";
+		echo -ne "Cache-control: no-cache\n";
 		echo -ne "\n";
 
-		cat "${FILENAME}";
+		if [ "${HTTP_LAST_EVENT_ID}" == "earliest" ]; then {
+			cat "${FILENAME}";
+		}
+		fi
+
+		if [[ ${EVENT_WAIT} -eq -1 ]]; then {
+			tail -n 0 -f "${FILENAME}";
+		}
+		else {
+			timeout ${TIMEOUT_ARGS} tail -n 0 -f "${FILENAME}";
+		}
+		fi
+	}
+	else {
+
+		flock -s "${FLOCK_ARGS}" 200 || exit 1;
+
+		CONTENT_TYPE=$(file --brief --mime-type ${FILENAME});
+
+		[ -f "${DIRECTORY}/.before-get.sh" ] && . ${DIRECTORY}/.before-get.sh
+		echo -ne "Status: 200 OK\n";
+		echo -ne "Content-type: ${CONTENT_TYPE}\n";
+		echo -ne "\n";
+
+		# touch -a "${FILENAME}";
+		cat < "${FILENAME}";
+
+		[ -f "${DIRECTORY}/.after-get.sh" ] && . ${DIRECTORY}/.after-get.sh
 	}
 	fi
 

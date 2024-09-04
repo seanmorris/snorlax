@@ -22,7 +22,7 @@ failIfResourceNotFound   "${FILENAME}";
 checkPerms "${REQUEST_METHOD}" "${FILENAME}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
 	|| respondUnauthorized "Action not allowed.";
 
-LOCK_FILE="/var/lock/sycamore${FILENAME}";
+LOCK_FILE="/var/lock/snorlax_"$(sed "s#_#__#g;s#/#_#g" <<< "${FILENAME}");
 LOCK_DIR=$(dirname "${LOCK_FILE}");
 
 mkdir -p "${LOCK_DIR}";

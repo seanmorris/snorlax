@@ -37,7 +37,7 @@ function verifyFingerprint
 	local CONTENT=${3};
 	local PROVIDED_PRINT=${4};
 
-	ALLOW_FILE="/app/allowed-hosts/${PROVIDED_PRINT}.pem";
+	ALLOW_FILE="/app/allowed-keys/${PROVIDED_PRINT}.pem";
 
 	[[ -f ${ALLOW_FILE} ]] || {
 		return 1;
@@ -49,7 +49,7 @@ function verifyFingerprint
 
 	CALCULATED_PRINT=$(fingerprintKey <(printf '%b\n' "${PUBLIC_KEY}"));
 
-	[[ "${CALCULATED_PRINT}" == "${PROVIDED_PRINT}" ]] || {
+	[ "${CALCULATED_PRINT}" == "${PROVIDED_PRINT}" ] | {
 		return 1;
 	}
 

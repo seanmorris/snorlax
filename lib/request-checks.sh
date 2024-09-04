@@ -22,7 +22,7 @@ function failOnRequestDotFile
 ## if the given path is not a directory.
 function failIfCollectionNotFound
 {
-	[[ -d "${1}" ]] || {
+	[ -d "${1}" ] || {
 		cat > /dev/null;
 
 		echo -ne "Status: 404 COLLECTION NOT FOUND\n";
@@ -40,7 +40,7 @@ function failIfCollectionNotFound
 ## if the given path is a directory.
 function failIfCollecitonExists
 {
-	[[ -d "${1}" ]] && {
+	[ -d "${1}" ] && {
 		cat > /dev/null;
 
 		echo -ne "Status: 409 RESOURCE EXISTS\n";
@@ -58,7 +58,7 @@ function failIfCollecitonExists
 ## if the given path is not a file.
 function failIfResourceNotFound
 {
-	[[ -f "${1}" ]] || {
+	[ -e "${1}" ] || {
 		cat > /dev/null;
 
 		echo -ne "Status: 404 RESOURCE NOT FOUND\n";
@@ -76,7 +76,7 @@ function failIfResourceNotFound
 ## if the given path is a file.
 function failIfResourceExists
 {
-	[[ -f "${1}" ]] && {
+	[ -f "${1}" ] && {
 		cat > /dev/null;
 
 		echo -ne "Status: 409 RESOURCE EXISTS\n";
@@ -94,7 +94,7 @@ function failIfResourceExists
 ## if the given path is a non empty directory.
 function failIfCollectionNotEmpty
 {
-	[[ -d "${1}" ]] && [[ $(ls "${1}" | wc -l) -gt 0 ]] && {
+	[ -d "${1}" ] && [ $(ls "${1}" | wc -l) -gt 0 ] && {
 		cat > /dev/null;
 
 		echo -ne "Status: 409 NOT EMPTY\n";

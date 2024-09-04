@@ -34,17 +34,7 @@ checkPerms "${REQUEST_METHOD}" "${FILENAME}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}
 	exit 0;
 }
 
-rm "${FILENAME}" || {
-	echo -ne "Status: 500 UNEXPECTED ERROR\n";
-	echo -ne "Content-type: text/plain\n";
-	echo -ne "\n"
-	echo -ne "500: UNEXPECTED ERROR! Cannot remove '${RESOURCE}' due to unexpected error.\n";
-	echo -ne "\n";
-
-	exit 1;
-};
-
-LOCK_FILE="/var/lock/sycamore${FILENAME}";
+LOCK_FILE="/var/lock/snorlax_"$(sed "s#_#__#g;s#/#_#g" <<< "${FILENAME}");
 LOCK_DIR=$(dirname "${LOCK_FILE}");
 
 mkdir -p "${LOCK_DIR}";
@@ -52,12 +42,27 @@ mkdir -p "${LOCK_DIR}";
 cat > /dev/null;
 
 (
+	[ -f "${DIRECTORY}/.before-delete.sh" ] && . ${DIRECTORY}/.before-delete.sh
+
 	flock -x "${FLOCK_ARGS}" 200 || exit 1;
+
+	rm "${FILENAME}" || {
+		echo -ne "Status: 500 UNEXPECTED ERROR\n";
+		echo -ne "Content-type: text/plain\n";
+		echo -ne "\n"
+		echo -ne "500: UNEXPECTED ERROR! Cannot remove '${RESOURCE}' due to unexpected error.\n";
+		echo -ne "\n";
+
+		exit 1;
+	};
+
 	echo -ne "Status: 200 OK RESOURCE REMOVED\n";
 	echo -ne "Content-type: text/plain\n\n";
 	echo -ne "👍 ok!\n";
 
-	cd /app && [[ -f "${UNMAKE_FILE}" ]] && rm $(cat "${UNMAKE_FILE}");
+	# cd /app && [[ -f "${UNMAKE_FILE}" ]] && rm $(cat "${UNMAKE_FILE}");
+
+	[ -f "${DIRECTORY}/.after-delete.sh" ] && . ${DIRECTORY}/.after-delete.sh
 
 	# cd /app && make unmake > /dev/null;
 

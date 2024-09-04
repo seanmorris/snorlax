@@ -18,7 +18,6 @@ set -x;
 . "$(dirname "${0}")"/../lib/responses.sh
 
 [ -z "${REQUEST_URI}" ] || [ "${REQUEST_URI}" == "/" ] && {
-
 	respondChallengeString;
 }
 
@@ -29,22 +28,23 @@ QUERY_STRING=$(cut -d'?' -f 2 <(echo "${REQUEST_URI}"));
 
 ## Resolve traversals/links and ensure we're
 ## still in a valid directory
-
 FILENAME=$(readlink -f "${PUBLIC_ROOT}${REQUEST_PATH}");
+MISSING_COLLECTION=0
 
 test "${FILENAME##${PUBLIC_ROOT}}" != "${FILENAME}" || {
 	respondNotFound $REQUEST_PATH;
+	# if [ readlink -f `dirname "${PUBLIC_ROOT}${REQUEST_PATH}"` ]; then {		
+	# } fi;
+	echo "${FILENAME##${PUBLIC_ROOT}}";
 	exit 1;
 }
 
 ## Request vars
-
 DIRECTORY=$(dirname "${FILENAME}");
 RESOURCE=${REQUEST_URI#\/};
 COLLECTION=$(dirname "${RESOURCE}");
 
 ## Config defaults...
-
 LOCK_WAIT=${LOCK_WAIT:-0};
 
 if [[ -z ${LOCK_WAIT} ]]; then

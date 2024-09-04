@@ -44,6 +44,14 @@ function chunkFileDescriptor
 	}; done;
 }
 
+function eventsFromFileDescriptor
+{
+	cat "${2}" | while read LINE; do {
+		echo -ne "event: ${1}\n";
+		echo -ne "data: ${LINE}\n\n";
+	}; done;
+}
+
 function respondChallengeString
 {
 	cat > /dev/null;
@@ -57,7 +65,7 @@ function respondChallengeString
 	echo -ne "\n";
 	echo -ne "# GENERATED=$(date +%s) \n";
 	echo -ne "\n";
-	
+
 	echo -ne "-----BEGIN PLAINTEXT CHALLENGE----- \n";
 	echo "${RANDOM_BYTES}";
 	echo -ne "-----END PLAINTEXT CHALLENGE-----\n";
@@ -69,7 +77,7 @@ function respondChallengeString
 	echo -ne "${SYMMETRIC_KEY}\n";
 	echo -ne "-----END PLAINTEXT SYMMETRIC KEY-----\n";
 	echo -ne "\n";
-	
+
 	RANDOM_ENCRYPTED=$(openssl enc -aes-256-cbc -salt -in <(echo "${RANDOM_BYTES}") -k <(echo "${SYMMETRIC_KEY}") | openssl base64)
 
 	echo -ne '-----BEGIN ENCRYPTED CHALLENGE-----\n';
@@ -84,16 +92,16 @@ function respondChallengeString
 
 	# USER_PUBLIC_KEY=/app/allowed-hosts/1c147053ba4e81d6a939fb2654bcd95318efb4c3.pem
 	USER_PUBLIC_KEY=/app/ssh/public-key.pem
-	
+
 	SYMMETRIC_ENCRYPTED=$(openssl rsautl -encrypt -inkey "${USER_PUBLIC_KEY}" -pubin -in <(echo "${SYMMETRIC_KEY}") | openssl base64)
 
 	echo -ne '-----BEGIN ENCRYPTED SYMMETRIC KEY-----\n';
 	echo -ne "${SYMMETRIC_ENCRYPTED}\n";
 	echo -ne '-----END ENCRYPTED SYMMETRIC KEY-----\n';
 	echo -ne '\n';
-	
+
 	USER_PRIVATE_KEY=/app/ssh/private-key.pem
-	
+
 	SYMMETRIC_DECRYPTED=$(openssl rsautl -decrypt -inkey "${USER_PRIVATE_KEY}" -in <(echo "${SYMMETRIC_ENCRYPTED}" | openssl base64 -d) | openssl base64)
 
 	echo -ne '-----BEGIN DECRYPTED SYMMETRIC KEY-----\n';
@@ -105,7 +113,7 @@ function respondChallengeString
 	openssl enc -d -aes-256-cbc -d -salt -in <(echo "${RANDOM_ENCRYPTED}" | openssl base64 -d) -k <(echo "${SYMMETRIC_KEY}")
 	echo -ne '-----END DECRYPTED CHALLENGE-----\n';
 	echo -ne '\n';
-	
+
 	# echo -ne '-----BEGIN RSA SIGNATURE-----\n';
 	# openssl dgst -sha1 -sign /app/ssh/private-key.pem <(echo "${RANDOM_BYTES}") | openssl base64
 	# echo -ne '-----END RSA SIGNATURE-----\n';

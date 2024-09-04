@@ -11,7 +11,7 @@ failOnRequestDotFile;
 CONTENT=$(cat);
 
 verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
-	respondUnauthorized "Signature verification failed.";
+	|| respondUnauthorized "Signature verification failed.";
 
 verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
 	|| respondUnauthorized "Fingerprint verification failed.";
@@ -23,12 +23,14 @@ failIfResourceNotFound   "${FILENAME}";
 checkPerms "${REQUEST_METHOD}" "${FILENAME}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
 	|| respondUnauthorized "Action not allowed.";
 
-LOCK_FILE="/var/lock/sycamore${FILENAME}";
+LOCK_FILE="/var/lock/snorlax_"$(sed "s#_#__#g;s#/#_#g" <<< "${FILENAME}");
 LOCK_DIR=$(dirname "${LOCK_FILE}");
 
 mkdir -p "${LOCK_DIR}";
 
 (
+	[ -f "${DIRECTORY}/.before-patch.sh" ] && . ${DIRECTORY}/.before-patch.sh
+
 	flock -x "${FLOCK_ARGS}" 200 || exit 1;
 	echo -ne "Status: 201 OK RESOURCE PATCHED\n";
 	echo -ne "Content-type: text/plain\n";
@@ -36,6 +38,8 @@ mkdir -p "${LOCK_DIR}";
 	echo -ne "\n"
 
 	tee -a "${FILENAME}" <<< "${CONTENT}";
+
+	[ -f "${DIRECTORY}/.after-patch.sh" ] && . ${DIRECTORY}/.after-patch.sh
 
 	# cd /app && make unmake > /dev/null;
 

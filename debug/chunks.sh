@@ -8,4 +8,4 @@ set -x;
 LOCATION=${1:-};
 # FILENAME=${2:-/dev/null};
 
-request "GET" "$LOCATION" "/dev/null" "text/event-stream";
+request "GET" "$LOCATION" "/dev/null" "text/stream";

@@ -1,7 +1,7 @@
 ARG UID=1000
 ARG GID=1000
 
-FROM debian:bullseye-20210621-slim as base
+FROM debian:bookworm-20240812-slim AS base
 MAINTAINER Sean Morris <sean@seanmorr.is>
 
 ARG UID
@@ -12,7 +12,7 @@ SHELL ["/bin/bash", "-c"]
 RUN set -eux;\
 	apt-get update;\
 	apt-get install -y --no-install-recommends\
-		apache2 bsdmainutils make file openssl;
+		apache2 bsdmainutils make file openssl uuid-runtime inotify-tools;
 
 RUN set -eux;\
 	a2enmod \
@@ -35,6 +35,11 @@ RUN set -eux;\
 	apt-get clean;
 
 COPY methods.conf /etc/apache2/mods-enabled/
+
+RUN set -eux;\
+	apt-get update;\
+	apt-get install -y --no-install-recommends\
+		pandoc python-jsonschema jq;
 
 USER $UID
 

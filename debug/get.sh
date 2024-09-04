@@ -3,7 +3,7 @@
 # shellcheck source=../lib/crypto.sh
 . "$(dirname "${0}")"/request.sh
 
-set -x;
+# set -x;
 
 LOCATION=${1:-};
 FILENAME=${2:-/dev/null};
