@@ -16,11 +16,11 @@ CONTENT=$(cat);
 failOnRequestDotFile;
 
 if [ "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}" != "ANON" ]; then {
+	verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
+		|| respondUnauthorized "Fingerprint verification failed.";
+
 	verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
 		|| respondUnauthorized "Signature verification failed.";
-
-	verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
-		|| respondUnauthorized "Fingerprint verification failed.";
 }
 fi
 
@@ -80,7 +80,9 @@ checkPerms "${REQUEST_METHOD}" "${FILENAME}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}
 			. ${FILENAME}/.index.sh;
 		}
 		else {
-			ls -t --time=birth ${FILENAME}
+			PAGE=${QUERY_PARAMS[p]:-0};
+			sort=${QUERY_PARAMS[s]:-creation};
+			ls -t --time=${sort} ${FILENAME} | tail +$((5 * ${PAGE})) | head -n 10
 		}
 		fi
 

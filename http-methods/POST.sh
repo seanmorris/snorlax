@@ -10,11 +10,11 @@ failOnRequestDotFile;
 
 CONTENT=$(cat);
 
+verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
+	|| respondUnauthorized "Fingerprint verification failed.";
+
 verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
 	|| respondUnauthorized "Signature verification failed.";
-
-verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
-	|| respondUnauthorized "Fingerprint verification failed.";
 
 failIfCollectionNotFound "${DIRECTORY}";
 failIfResourceExists     "${FILENAME}";
@@ -52,7 +52,7 @@ mkdir -p "${LOCK_DIR}";
 
 	tee "${FILENAME}" <<< "${CONTENT}";
 
-	[ -f "${DIRECTORY}/.before-post.sh" ] && . ${DIRECTORY}/.after-post.sh
+	[ -f "${DIRECTORY}/.after-post.sh" ] && . ${DIRECTORY}/.after-post.sh
 
 	# cd /app && make unmake > /dev/null;
 

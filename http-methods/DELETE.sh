@@ -10,11 +10,11 @@ failOnRequestDotFile;
 
 CONTENT="$(cat)";
 
+verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
+	|| respondUnauthorized "Fingerprint verification failed.";
+
 verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
 	|| respondUnauthorized "Signature verification failed.";
-
-verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
-	|| respondUnauthorized "Fingerprint verification failed.";
 
 failIfCollectionNotFound "${DIRECTORY}";
 failIfResourceNotFound   "${FILENAME}";

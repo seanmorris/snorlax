@@ -3,18 +3,21 @@
 # shellcheck source=../lib/init.sh
 set -a; . "$(dirname "${0}")/../lib/init.sh"; set +a;
 
-[[ -z "${HTTP_RSA_PUBLIC_KEY}" ]] && respondUnauthorized;
-[[ -z "${HTTP_RSA_SIGNATURE}" ]] && respondUnauthorized;
+# [[ -z "${HTTP_RSA_PUBLIC_KEY}" ]] && respondUnauthorized;
+# [[ -z "${HTTP_RSA_SIGNATURE}" ]] && respondUnauthorized;
 
 failOnRequestDotFile;
 
 CONTENT=$(cat);
 
-verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
-	|| respondUnauthorized "Signature verification failed.";
+if [ "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}" != "ANON" ]; then {
+	verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
+		|| respondUnauthorized "Fingerprint verification failed.";
 
-verifyFingerprint "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}" "${HTTP_RSA_PUBLIC_KEY_FINGERPRINT}"\
-	|| respondUnauthorized "Fingerprint verification failed.";
+	verifySignature "${HTTP_RSA_PUBLIC_KEY}" "${HTTP_RSA_SIGNATURE}" "${CONTENT}"\
+		|| respondUnauthorized "Signature verification failed.";
+}
+fi
 
 failIfCollectionNotFound "${DIRECTORY}";
 failIfResourceNotFound   "${FILENAME}";

@@ -26,14 +26,25 @@ PUBLIC_ROOT='/app/public';
 REQUEST_PATH=$(cut -d'?' -f 1 <(echo "${REQUEST_URI}"));
 QUERY_STRING=$(cut -d'?' -f 2 <(echo "${REQUEST_URI}"));
 
+saveIFS=$IFS
+IFS='=&'
+QP=($QUERY_STRING)
+IFS=$saveIFS
+
+declare -A QUERY_PARAMS
+for ((i=0; i<${#QP[@]}; i+=2)); do {
+    QUERY_PARAMS[${QP[i]}]=${QP[i+1]}
+}
+done
+QP=
+
 ## Resolve traversals/links and ensure we're
 ## still in a valid directory
 FILENAME=$(readlink -f "${PUBLIC_ROOT}${REQUEST_PATH}");
-MISSING_COLLECTION=0
 
 test "${FILENAME##${PUBLIC_ROOT}}" != "${FILENAME}" || {
 	respondNotFound $REQUEST_PATH;
-	# if [ readlink -f `dirname "${PUBLIC_ROOT}${REQUEST_PATH}"` ]; then {		
+	# if [ readlink -f `dirname "${PUBLIC_ROOT}${REQUEST_PATH}"` ]; then {
 	# } fi;
 	echo "${FILENAME##${PUBLIC_ROOT}}";
 	exit 1;

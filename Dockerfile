@@ -38,8 +38,10 @@ COPY methods.conf /etc/apache2/mods-enabled/
 
 RUN set -eux;\
 	apt-get update;\
-	apt-get install -y --no-install-recommends\
-		pandoc python-jsonschema jq;
+	apt-get install -y --no-install-recommends \
+		pandoc texlive-latex-base texlive-latex-recommended texlive-xetex texlive-fonts-recommended texlive-fonts-extra \
+		lmodern ca-certificates librsvg2-bin \
+		python3-jsonschema jq;
 
 USER $UID
 

@@ -33,17 +33,11 @@ function verifySignature
 function verifyFingerprint
 {
 	local PUBLIC_KEY=${1};
-	local SIGNATURE=${2};
-	local CONTENT=${3};
-	local PROVIDED_PRINT=${4};
+	local PROVIDED_PRINT=${2};
 
-	ALLOW_FILE="/app/allowed-keys/${PROVIDED_PRINT}.pem";
+	KEY_FILE="/app/allowed-keys/${PROVIDED_PRINT}.pem";
 
-	[[ -f ${ALLOW_FILE} ]] || {
-		return 1;
-	}
-
-	verifySignature "${PUBLIC_KEY}" "${SIGNATURE}" "${CONTENT}" || {
+	[[ -f ${KEY_FILE} ]] || {
 		return 1;
 	}
 
@@ -53,5 +47,5 @@ function verifyFingerprint
 		return 1;
 	}
 
-	cmp "${ALLOW_FILE}" <( printf '%b\n' "${PUBLIC_KEY}" );
+	cmp "${KEY_FILE}" <( printf '%b\n' "${PUBLIC_KEY}" );
 }
